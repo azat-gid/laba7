@@ -3,23 +3,35 @@ import math
 import turtle as tr
 
 
+def draw_dashed_circle(cx, cy, r, dashes=60):
+    """Рисует пунктирную окружность с центром (cx, cy) и радиусом r."""
+    tr.penup()
+    for i in range(dashes):
+        angle1 = 2 * math.pi * i / dashes
+        angle2 = 2 * math.pi * (i + 0.5) / dashes
+        tr.goto(cx + r * math.cos(angle1), cy + r * math.sin(angle1))
+        tr.pendown()
+        tr.goto(cx + r * math.cos(angle2), cy + r * math.sin(angle2))
+        tr.penup()
+
+
 def main():
     # 1. Настройка графического окна
     tr.setup(width=800, height=800)
-    tr.title("Метод Монте-Карло: Заштрихованная фигура")
+    tr.title("Метод Монте-Карло: Заштрихованная фигура (вариант 34)")
     tr.bgcolor("white")
+
+    # Отключаем автообновление экрана для максимальной скорости
+    tr.tracer(0)
 
     # Задаем радиус R
     R = 15.0
 
-    # Устанавливаем мировую систему координат
-    # Оставляем место для осей и подписей
-    margin = 5
-    tr.setworldcoordinates(-R - margin, -R - margin, R + margin, R + margin)
+    # Масштаб окна, чтобы поместились обе полные окружности [-2R, 2R]
+    limit = 2 * R + 4
+    tr.setworldcoordinates(-limit, -limit, limit, limit)
 
-    # Настройки "черепашки"
-    tr.speed(0)  # Максимальная скорость
-    tr.ht()  # Скрываем черепашку
+    tr.ht()
     tr.penup()
 
     # 2. Рисуем оси координат
@@ -27,26 +39,54 @@ def main():
     tr.pensize(2)
 
     # Ось X
-    tr.goto(-R - 2, 0)
+    tr.goto(-2 * R - 1, 0)
     tr.pendown()
-    tr.goto(R + 2, 0)
+    tr.goto(2 * R + 1, 0)
     tr.penup()
-    tr.goto(R + 2.5, 0)
+    tr.goto(2 * R + 1.5, -1)
     tr.write("X", font=("Arial", 12, "bold"))
 
     # Ось Y
-    tr.goto(0, -R - 2)
+    tr.goto(0, -2 * R - 1)
     tr.pendown()
-    tr.goto(0, R + 2)
+    tr.goto(0, 2 * R + 1)
     tr.penup()
-    tr.goto(0, R + 2.5)
+    tr.goto(0.8, 2 * R + 1)
     tr.write("Y", font=("Arial", 12, "bold"))
 
-    # 3. Рисуем контуры фигуры (для наглядности)
+    # 3. Метод Монте-Карло (рисуем точки до контуров, чтобы контуры были поверх)
+    shots_count = 20000
+    hits = 0
+
+    for i in range(1, shots_count + 1):
+        x = random.uniform(-R, R)
+        y = random.uniform(-R, R)
+
+        # Левая верхняя окружность с центром (-R, R)
+        in_circle1 = (x + R) ** 2 + (y - R) ** 2 <= R ** 2
+
+        # Правая нижняя окружность с центром (R, -R)
+        in_circle2 = (x - R) ** 2 + (y + R) ** 2 <= R ** 2
+
+        # Попадание: внутри квадрата, но ВНЕ обеих окружностей
+        is_hit = not in_circle1 and not in_circle2
+
+        tr.goto(x, y)
+        if is_hit:
+            tr.dot(3, "dimgray")
+            hits += 1
+        else:
+            tr.dot(3, "lightgray")
+
+        # Обновляем кадр каждые 1000 точек (создает плавный и быстрый эффект)
+        if i % 1000 == 0:
+            tr.update()
+
+    # 4. Рисуем контуры фигуры поверх точек
     tr.pencolor("black")
     tr.pensize(2)
 
-    # Контур квадрата
+    # Контур квадрата [-R, R]
     tr.goto(-R, -R)
     tr.pendown()
     tr.goto(R, -R)
@@ -55,97 +95,50 @@ def main():
     tr.goto(-R, -R)
     tr.penup()
 
-    # Контур левой верхней окружности (пунктиром)
+    # Пунктирные окружности с центрами (-R, R) и (R, -R)
     tr.pencolor("gray")
     tr.pensize(1)
-    tr.goto(-R, R - R)  # Начало в точке касания (центр окружности (-R, R), нижняя точка (-R, 0))
-    tr.setheading(270)  # Смотрим вниз
-    tr.pendown()
-    tr.circle(R)  # Рисуем полную окружность
-    tr.penup()
+    draw_dashed_circle(-R, R, R)
+    draw_dashed_circle(R, -R, R)
 
-    # Контур правой нижней окружности (пунктиром)
-    tr.goto(R, -R + R)  # Начало в точке касания (центр окружности (R, -R), верхняя точка (R, 0))
-    tr.setheading(90)  # Смотрим вверх
-    tr.pendown()
-    tr.circle(R)  # Рисуем полную окружность
-    tr.penup()
-
-    # 4. Метод Монте-Карло
-    shots_count = 20000  # Количество испытаний (чем больше, тем четче картинка)
-    hits = 0
-
-    # Настройка точек
-    tr.shape("circle")
-    tr.shapesize(0.15)  # Маленькие точки
-
-    for i in range(shots_count):
-        # Генерируем случайные координаты в квадрате [-R, R]
-        x = random.uniform(-R, R)
-        y = random.uniform(-R, R)
-
-        # Проверка условий:
-        # 1. Точка внутри левой верхней окружности с центром (-R, R)
-        in_circle1 = (x + R) ** 2 + (y - R) ** 2 <= R ** 2
-
-        # 2. Точка внутри правой нижней окружности с центром (R, -R)
-        in_circle2 = (x - R) ** 2 + (y + R) ** 2 <= R ** 2
-
-        # Точка попадает в заштрихованную область, если она в любой из этих окружностей
-        # (Внутри квадрата они не пересекаются, поэтому условие ИЛИ работает корректно)
-        is_hit = in_circle1 or in_circle2
-
-        tr.goto(x, y)
-        if is_hit:
-            # Заштрихованная область - темно-серый
-            tr.color("dimgray")
-            tr.stamp()
-            hits += 1
-        else:
-            # Фон - светло-серый
-            tr.color("lightgray")
-            tr.stamp()
-
-    # 5. Вывод результатов
-    # Площадь квадрата (выборочного пространства)
+    # 5. Расчет и вывод результатов
     S_square = (2 * R) ** 2
-
-    # Оценка площади Монте-Карло
     S_mc = S_square * (hits / shots_count)
 
-    # Реальная площадь (две четверти круга, так как они не пересекаются внутри квадрата)
-    S_real = (math.pi * R ** 2) / 2
-
-    # Погрешность
+    # Точная площадь: площадь квадрата минус две четверти круга (полукруг)
+    S_real = S_square - (math.pi * R ** 2) / 2
     error_percent = abs(S_real - S_mc) / S_real * 100
 
-    # Вывод текста на экран (сверху)
-    tr.goto(-R - 2, R + 4)
+    # Вывод текста в свободном правом верхнем углу
+    text_x = 3
+    tr.goto(text_x, 2 * R)
     tr.pencolor("black")
     tr.write(f"Выстрелов: {shots_count}", font=("Arial", 10, "bold"))
 
-    tr.goto(-R - 2, R + 2.5)
+    tr.goto(text_x, 2 * R - 2)
     tr.write(f"Попаданий: {hits}", font=("Arial", 10, "bold"))
 
-    tr.goto(-R - 2, R + 1)
+    tr.goto(text_x, 2 * R - 4)
     tr.pencolor("darkgreen")
     tr.write(f"S (MC): {S_mc:.2f}", font=("Arial", 10, "bold"))
 
-    tr.goto(-R - 2, R - 0.5)
+    tr.goto(text_x, 2 * R - 6)
     tr.pencolor("blue")
     tr.write(f"S (Точная): {S_real:.2f}", font=("Arial", 10, "bold"))
 
-    tr.goto(-R - 2, R - 2)
+    tr.goto(text_x, 2 * R - 8)
     tr.pencolor("red")
     tr.write(f"Погрешность: {error_percent:.2f}%", font=("Arial", 10, "bold"))
 
-    # Вывод в консоль
+    # Финальное обновление экрана
+    tr.update()
+
     print("--- Метод Монте-Карло для заштрихованной фигуры ---")
     print(f"Радиус R = {R}")
     print(f"Всего точек: {shots_count}")
     print(f"Попаданий: {hits}")
     print(f"Площадь (Монте-Карло): {S_mc:.4f}")
-    print(f"Точная площадь (полукруг): {S_real:.4f}")
+    print(f"Точная площадь: {S_real:.4f}")
     print(f"Погрешность: {error_percent:.2f}%")
 
     tr.done()
